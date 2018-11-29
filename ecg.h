@@ -11,8 +11,8 @@
 
 int ecg_init(int addr);
 
-int ecg_send(int  dst, char* packet, int len, int to_ms);
+int ecg_send(int  dst);
 
-int ecg_recv(int* src, char* packet, int len, int to_ms);
+int ecg_recv();
 
 #endif // _ECG_H_

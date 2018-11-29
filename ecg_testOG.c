@@ -57,9 +57,7 @@ int sender() {
 
     printf("Protocol node initialized\n");
 
-    err =ecg_send(rcv_addr);
-
-    /*while (1) {
+    while (1) {
 
         // Get next message from console
         printf("Enter message: ");
@@ -70,7 +68,7 @@ int sender() {
         if (msg[last] == '\n') { msg[last] = '\0'; }  // Drop ending newline
         printf("et eller nadet");
         // Send it reliably
-        err = ecg_send(rcv_addr);
+        err = ecg_send(rcv_addr, msg, strlen(msg), SEND_TIMEOUT_SEC * 1000);
 
         if (err != ERR_OK && err != ERR_TIMEOUT) {
             printf("ecg_send failed with %d\n", err);
@@ -83,7 +81,7 @@ int sender() {
         }
 
         printf("Reliably sent: %s\n", msg);
-    }*/
+    }
 
     return 0;
 }
@@ -103,9 +101,7 @@ int receiver() {
 
     printf("Protocol init initialized\n");
 
-    err = ecg_recv();
-
-    /*while (1) {
+    while (1) {
 
         if ( (len=ecg_recv(&source, buf, sizeof(buf), RECV_TIMEOUT_SEC * 1000)) < 0) {
             if (len == ERR_TIMEOUT) {
@@ -118,7 +114,7 @@ int receiver() {
 
         buf[len] = '\0';
         printf("Received %d bytes from address %d: %s\n", len, source, buf);
-    }*/
+    }
 
     printf("Receive loop ended!\n");
     return 1;

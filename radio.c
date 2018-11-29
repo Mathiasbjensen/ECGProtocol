@@ -91,6 +91,7 @@ int radio_send(int  dst, char* data, int len) {
     }
 
     // Send the message & check if it's fully sent.
+    // Check blocking af sendto
     if (sendto(sock, data, len , 0 , (struct sockaddr *) &sa, slen)!=len)
     {
         die("sendto()");

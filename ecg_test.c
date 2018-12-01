@@ -44,7 +44,7 @@ void read_args(int argc, char * argv[]) {
 }
 
 int sender() {
-    int err, last;
+    int err, last, len;
 
     char msg[SEND_BUF_SIZE];
 
@@ -57,10 +57,18 @@ int sender() {
 
     printf("Protocol node initialized\n");
 
-    err =ecg_send(rcv_addr);
 
-    /*while (1) {
 
+    while (1) {
+        printf("Enter message: ");
+        fgets(msg, SEND_BUF_SIZE, stdin);
+        len = strlen(msg);
+
+        err =ecg_send(rcv_addr, &msg, len);
+
+
+
+/*
         // Get next message from console
         printf("Enter message: ");
         printf("venter");
@@ -82,8 +90,8 @@ int sender() {
             continue;
         }
 
-        printf("Reliably sent: %s\n", msg);
-    }*/
+        printf("Reliably sent: %s\n", msg);*/
+    }
 
     return 0;
 }
@@ -103,7 +111,11 @@ int receiver() {
 
     printf("Protocol init initialized\n");
 
-    err = ecg_recv();
+    while(1){
+          err = ecg_recv();
+          printf("\n");
+    }
+
 
     /*while (1) {
 

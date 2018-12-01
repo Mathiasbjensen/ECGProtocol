@@ -11,7 +11,7 @@
 
 int ecg_init(int addr);
 
-int ecg_send(int  dst);
+int ecg_send(int dst, char* msg, int len);
 
 int ecg_recv();
 

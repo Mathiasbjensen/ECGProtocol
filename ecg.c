@@ -25,7 +25,7 @@
 #define WAIT_PACK 1
 #define SEND_ACK 2
 
-#define BUFFLEN 72
+#define BUFFLEN 71
 #define SEND_BUF_SIZE 1024
 
 int ecg_init(int address){
@@ -64,15 +64,17 @@ int ecg_send(int dst, char* msg, int len){
   //char msg[SEND_BUF_SIZE];
   int err;
   char lenstr[10];
-  int source, packN;
+  int source, packN, lastmsglen;
 
   while(1) {
 
     switch(state){
       case INIT:
 
+            msg[len] = '\0';
+            lastmsglen = (len > BUFFLEN) ? len%BUFFLEN : len;
+            len = (len > BUFFLEN) ? len/BUFFLEN+1 : 1;
 
-            len = (len > 72) ? len/72+1 : 1;
             printf("Length %d string %s",len,msg);
             sprintf(lenstr, "%d", len);
 
@@ -105,7 +107,15 @@ int ecg_send(int dst, char* msg, int len){
             break;
       case SEND_DATA:
             data.data.type.tag = DATA;
-            memcpy(data.data.str,&msg[(BUFFLEN-1)*packN],BUFFLEN);
+            if(packN == len-1){
+              memcpy(data.data.str,&msg[(BUFFLEN)*packN], lastmsglen);
+              printf("Lastmsglen: %d\n", lastmsglen);
+              data.data.str[lastmsglen] = '-';
+              //memset(&data.data.str[lastmsglen],'\0',BUFFLEN-lastmsglen);
+              printf("hej %s\n", data.data.str);
+            } else {
+              memcpy(data.data.str,&msg[(BUFFLEN)*packN],BUFFLEN);
+            }
             printf("data sent: %s\n", data.data.str);
             if ( (err=radio_send(dst, data.raw, FRAME_PAYLOAD_SIZE) != ERR_OK)) {
                 printf("radio_send req failed with %d\n", err);
@@ -133,7 +143,7 @@ int ecg_send(int dst, char* msg, int len){
             state = (packN == len) ? DONE : SEND_DATA;
             break;
       case DONE:
-            printf("Data send");
+            printf("Data sent");
             return 1;
     }
 
@@ -146,7 +156,7 @@ int ecg_recv(){
   int state = READY;
   pdu_frame_t buf;
   int source, len, err, last;
-  char data[SEND_BUF_SIZE];
+  char data[SEND_BUF_SIZE] = {};
   int lenOfReq, lenOfData, packN;
 
   while(1) {
@@ -181,13 +191,14 @@ int ecg_recv(){
             state = WAIT_PACK;
             break;
       case WAIT_PACK:
+            //memset(&buf.data.str[0],'\0', sizeof(buf.data.str));
             if ( (len=radio_recv(&source, buf.raw, -1))==ERR_OK) {
                 printf("radio_recv failed with %d\n", len);
                 return 1;
               }
-            printf("buf.data.str: %s\n",buf.data.str);
+            printf("buf.data.str: %s   - END\n",buf.data.str);
             last = strlen(buf.data.str) - 1;
-            buf.data.str[last] = '?';   // Drop ending newline
+            buf.data.str[last] = '\0';   // Drop ending newline
 
             if ( buf.pdu_type.tag != DATA) {
               printf("Received something else than DATA\n");
@@ -195,10 +206,15 @@ int ecg_recv(){
             }
             if (packN == lenOfData-1) {
               int j = 0;
-              while (buf.data.str[j] != '\0') {
+              while (buf.data.str[j] != '-') {
+              //while(j<12){
+                printf("%c\n",buf.data.str[j]);
                 data[packN*BUFFLEN + j] = buf.data.str[j];
                 j++;
               }
+              printf("j: %i\n", j);
+              //memset(&data[packN*BUFFLEN],'\0',BUFFLEN);
+
             } else {
               memcpy(&data[BUFFLEN*packN],buf.data.str, BUFFLEN);
             }
@@ -218,7 +234,7 @@ int ecg_recv(){
             break;
 
       case DONE:
-            printf("Result = %s",data);
+            printf("Result = %s       END",data);
             return 1;
 
 

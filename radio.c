@@ -12,12 +12,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 
 
 #define RADIOADDR "127.0.0.1"
 #define BUFLEN 72
+
+
 
 int sock;    // UDP Socket used by this node
 
@@ -118,11 +121,25 @@ int radio_recv(int* src, char* data, int to_ms) {
     }
 
 
-    // First poll/select with timeout (may be skipped at first)
+    // First poll/select with timeout  (may be skipped at first)
+/*
+    struct timeval timeout;
+    timeout.tv_sec = 10;
+    timeout.tv_usec = 0;
+
+    if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+                sizeof(timeout)) < 0)
+        error("setsockopt failed\n");
+
+    if (setsockopt (sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+                sizeof(timeout)) < 0)
+        error("setsockopt failed\n");*/
 
 
     // Receive packet/data
+    printf("Before recvfrom\n");
     len = recvfrom(sock, buf, BUFLEN, 0, (struct sockaddr *) &sa, &slen);
+    printf("After recvfrom\n");
     if (len == -1)
     {
             die("recvfrom()");

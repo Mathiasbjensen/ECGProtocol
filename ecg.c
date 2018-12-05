@@ -28,6 +28,8 @@
 #define BUFFLEN 71
 #define SEND_BUF_SIZE 1024
 
+#define LAST_CHAR '|'
+
 int ecg_init(int address){
   return radio_init(address);
 }
@@ -38,15 +40,18 @@ typedef struct {char tag; } tag_t;
 typedef struct {
     tag_t type;
     char  str[0];
+    int checksum;
 } req_pdu_t;
 
 typedef struct {
     tag_t type;
     char  str[0];
+    int checksum;
 } data_pdu_t;
 
 typedef struct {
     tag_t type;
+    int checksum;
 } ack_pdu_t;
 
 typedef union {
@@ -63,6 +68,7 @@ int ecg_send(int dst, char* msg, int len){
   pdu_frame_t data;
   //char msg[SEND_BUF_SIZE];
   int err;
+  int packagesLost = 0;
   char lenstr[10];
   int source, packN, lastmsglen;
 
@@ -95,7 +101,11 @@ int ecg_send(int dst, char* msg, int len){
                 printf("radio_recv failed with %d\n", err);
                 return 1;
               }
-
+            if(err==ERR_TIMEOUT){
+              packagesLost++;
+              state = DONE;
+              break;
+            }
             if (data.pdu_type.tag != ACK){
               printf("Received something else than ACK\n");
               return ERR_FAILED;
@@ -109,10 +119,10 @@ int ecg_send(int dst, char* msg, int len){
             data.data.type.tag = DATA;
             if(packN == len-1){
               memcpy(data.data.str,&msg[(BUFFLEN)*packN], lastmsglen);
-              printf("Lastmsglen: %d\n", lastmsglen);
-              data.data.str[lastmsglen] = '-';
+              //printf("Lastmsglen: %d\n", lastmsglen);
+              data.data.str[lastmsglen] = LAST_CHAR;
               //memset(&data.data.str[lastmsglen],'\0',BUFFLEN-lastmsglen);
-              printf("hej %s\n", data.data.str);
+              //printf("hej %s\n", data.data.str);
             } else {
               memcpy(data.data.str,&msg[(BUFFLEN)*packN],BUFFLEN);
             }
@@ -133,6 +143,12 @@ int ecg_send(int dst, char* msg, int len){
                 return ERR_FAILED;
               }
 
+            if(err==ERR_TIMEOUT){
+              packagesLost++;
+              state = DONE;
+              break;
+            }
+
             if (data.pdu_type.tag != ACK){
               printf("Received something else than ACK\n");
               return ERR_FAILED;
@@ -143,7 +159,7 @@ int ecg_send(int dst, char* msg, int len){
             state = (packN == len) ? DONE : SEND_DATA;
             break;
       case DONE:
-            printf("Data sent");
+            printf("Data sent. %d packages lost",packagesLost);
             return 1;
     }
 
@@ -158,6 +174,7 @@ int ecg_recv(){
   int source, len, err, last;
   char data[SEND_BUF_SIZE] = {};
   int lenOfReq, lenOfData, packN;
+  int packagesLost = 0;
 
   while(1) {
     switch (state) {
@@ -171,6 +188,12 @@ int ecg_recv(){
                 printf("radio_recv failed with %d\n", len);
                 return ERR_FAILED;
               }
+
+            if(err==ERR_TIMEOUT){
+              packagesLost++;
+              state = DONE;
+              break;
+            }
 
             if ( buf.pdu_type.tag != REQ) {
               printf("Received something else than REQ\n");
@@ -196,9 +219,14 @@ int ecg_recv(){
                 printf("radio_recv failed with %d\n", len);
                 return 1;
               }
-            printf("buf.data.str: %s   - END\n",buf.data.str);
+            if(err==ERR_TIMEOUT){
+              packagesLost++;
+              state = DONE;
+              break;
+            }
+            //printf("buf.data.str: %s   - END\n",buf.data.str);
             last = strlen(buf.data.str) - 1;
-            buf.data.str[last] = '\0';   // Drop ending newline
+            buf.data.str[last] = LAST_CHAR;   // Drop ending newline
 
             if ( buf.pdu_type.tag != DATA) {
               printf("Received something else than DATA\n");
@@ -206,9 +234,8 @@ int ecg_recv(){
             }
             if (packN == lenOfData-1) {
               int j = 0;
-              while (buf.data.str[j] != '-') {
-              //while(j<12){
-                printf("%c\n",buf.data.str[j]);
+              while (buf.data.str[j] != LAST_CHAR) {
+                //printf("%c\n",buf.data.str[j]);
                 data[packN*BUFFLEN + j] = buf.data.str[j];
                 j++;
               }
@@ -234,7 +261,7 @@ int ecg_recv(){
             break;
 
       case DONE:
-            printf("Result = %s       END",data);
+            printf("%d packages lost. Result = %s",packagesLost,data);
             return 1;
 
 

@@ -122,8 +122,8 @@ int radio_recv(int* src, char* data, int to_ms) {
 
 
     // First poll/select with timeout  (may be skipped at first)
-/*
-    struct timeval timeout;
+
+    /*struct timeval timeout;
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
 
@@ -142,7 +142,8 @@ int radio_recv(int* src, char* data, int to_ms) {
     printf("After recvfrom\n");
     if (len == -1)
     {
-            die("recvfrom()");
+      return ERR_TIMEOUT;
+            //die("recvfrom()");
     }
 
     for (int i=0; i<BUFLEN; i++){
